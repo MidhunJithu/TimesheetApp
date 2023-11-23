@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timesheet Website</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 300px;
+            margin: auto;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        input[type="submit"] {
+            background-color: #4caf50;
+            color: white;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        /* Add styles for the results block */
+        #results {
+            margin-top: 20px;
+            border-top: 2px solid #ccc;
+            padding-top: 20px;
+            display: none;
+        }
+
+        label.result-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .result-value {
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Timesheet Website</h1>
+    
+    <form id="timesheetForm">
+        <label for="sheetId">Enter Google Sheet ID:</label>
+        <input type="text" id="sheetId" name="sheetId" required>
+        <br>
+        <label for="sheetName">Sheet Name:</label>
+        <input type="text" id="sheetName" name="sheetName" required>
+        <br>
+        
+        <input type="submit" value="Submit">
+    </form>
+    <div id="results">
+        <h2>Timesheet Details</h2>
+        <label class="result-label" for="lastUpdated">Last Updated:</label>
+        <div class="result-value" id="lastUpdated">Sample Date</div>
+
+        <label class="result-label" for="lastDescription">Last Description:</label>
+        <div class="result-value" id="lastDescription">Sample Description</div>
+
+        <label class="result-label" for="hours">Hours:</label>
+        <div class="result-value" id="hours">Sample Hours</div>
+
+        <label class="result-label" for="leaveDetails">Leave Details:</label>
+        <div class="result-value" id="leaveDetails">Sample Leave Details</div>
+    </div>
+
+    <script>
+         // Set default value for the "Sheet Name" input field
+         document.getElementById("sheetName").value = getDefaultSheetName();
+
+        function getDefaultSheetName() {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const currentDate = new Date();
+            const monthName = months[currentDate.getMonth()];
+            const year = currentDate.getFullYear();
+
+            return `${monthName}-${year}`;
+        }
+        document.getElementById("timesheetForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            const sheetId = document.getElementById("sheetId").value;
+            const sheetName = document.getElementById("sheetName").value;
+            console.log("Sheet ID or Name:", sheetId);
+             // You can also use JavaScript to send the sheetId to your Go backend using fetch or another method
+            // Example using fetch:
+            fetch('/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(
+                    { 
+                        sheetId: sheetId,
+                        sheetName: sheetName
+                    }
+                ),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Handle the response from your Go backend if needed
+                console.log("data:", data);
+                alert("data:", data.JSON);   
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>
