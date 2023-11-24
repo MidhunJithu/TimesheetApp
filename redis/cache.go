@@ -10,7 +10,7 @@ func NewCache() *models.Cache {
 	return &models.Cache{
 		Redis: redis.NewClient(
 			&redis.Options{
-				Addr:     "localhost:6379",
+				Addr:     "localhost:8080",
 				Password: "",
 				DB:       0,
 			},
