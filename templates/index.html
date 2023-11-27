@@ -72,6 +72,45 @@
             font-weight: bold;
             margin-bottom: 16px;
         }
+        #inputFields {
+            width: 100%;
+            display: none;
+        }
+
+        label.input-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        input[type="submit"],
+        input[type="button"] {
+            background-color: #4caf50;
+            color: white;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover,
+        input[type="button"]:hover {
+            background-color: #45a049;
+        }
+        .flexBox{
+            display: flex;
+            flex-direction: row;
+            flex-basis: auto;
+        }
     </style>
 </head>
 <body>
@@ -87,20 +126,51 @@
         
         <input type="submit" value="Submit">
     </form>
-    <div id="results">
-        <h2>Timesheet Details</h2>
-        <label class="result-label" for="lastUpdated">Last Updated:</label>
-        <div class="result-value" id="lastUpdated">Sample Date</div>
+    <div class="flexBox">
+        <div id="results">
+            <h2>Timesheet Details</h2>
+            <label class="result-label" for="lastUpdated">Last Updated:</label>
+            <div class="result-value" id="lastUpdated">Sample Date</div>
 
-        <label class="result-label" for="lastDescription">Last Description:</label>
-        <div class="result-value" id="lastDescription">Sample Description</div>
+            <label class="result-label" for="lastDescription">Last Description:</label>
+            <div class="result-value" id="lastDescription">Sample Description</div>
 
-        <label class="result-label" for="hours">Hours:</label>
-        <div class="result-value" id="hours">Sample Hours</div>
+            <label class="result-label" for="hours">Hours:</label>
+            <div class="result-value" id="hours">Sample Hours</div>
 
-        <label class="result-label" for="leaveDetails">Leave Details:</label>
-        <div class="result-value" id="leaveDetails">Sample Leave Details</div>
+            <label class="result-label" for="leaveDetails">Leave Details:</label>
+            <div class="result-value" id="leaveDetails">Sample Leave Details</div>
+        </div>
+        <div id="inputFields">
+            <h2>Enter Timesheet Data</h2>
+            <label class="input-label" for="sheetIdToUpdate">SheetId:</label>
+            <input type="text" id="sheetIdToUpdate" name="sheetIdToUpdate" disabled required>
+
+            <label class="input-label" for="task">Task:</label>
+            <input type="text" id="task" name="task" required>
+            
+            <label class="input-label" for="date">Date:</label>
+            <input type="date" id="date" name="date" required>
+            
+            <label class="input-label" for="hoursWorked">Hours Worked:</label>
+            <input type="number" id="hoursWorked" name="hoursWorked" min="0" step="0.5" required value="8">
+            
+            <label class="input-label" for="leaveOptions">Leave Options:</label>
+            <select id="leaveOptions" name="leaveOptions">
+                <option value="Vacation">Vacation</option>
+                <option value="Sick Leave">Sick Leave</option>
+                <option value="Public Holiday">Public Holiday</option>
+                <option value="Leave">other leave</option>
+                <option value="No" selected>No</option>
+                <!-- Add more options as needed -->
+            </select>
+            <label class="input-label" for="sheet_range">Sheet Range To Update:</label>
+            <input type="text" id="sheet_range" name="sheet_range" required>
+
+            <input type="button" value="Submit Timesheet Data" onclick="submitTimesheetData()">
+        </div>
     </div>
+    
 
     <script>
          // Set default value for the "Sheet Name" input field
@@ -115,6 +185,7 @@
             return `${monthName}-${year}`;
         }
         document.getElementById("timesheetForm").addEventListener("submit", function(event) {
+
             event.preventDefault();
 
             const sheetId = document.getElementById("sheetId").value;
@@ -122,7 +193,7 @@
             console.log("Sheet ID or Name:", sheetId);
              // You can also use JavaScript to send the sheetId to your Go backend using fetch or another method
             // Example using fetch:
-            fetch('/submit', {
+            fetch('/sheet/submit', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -136,14 +207,75 @@
             })
             .then(response => response.json())
             .then(data => {
+                var newdate = new Date(data.upcoming_change.date_to_update)
+                var newMonth = (newdate.getMonth() + 1).toString().padStart(2,'0')
+                var newday = newdate.getDate().toString().padStart(2,'0')
+                console.log(newday+"-"+newMonth+"-"+newdate.getFullYear())
                 // Handle the response from your Go backend if needed
-                console.log("data:", data);
-                alert("data:", data.JSON);   
+                document.getElementById("lastUpdated").textContent = data.last_update.last_updated_date; 
+                document.getElementById("lastDescription").textContent = data.last_update.last_task_info; 
+                document.getElementById("hours").textContent = data.last_update.last_working_hours; 
+                document.getElementById("leaveDetails").textContent = data.last_update.leave_on_last_date; 
+                document.getElementById("date").value = newdate.getFullYear() + "-" + newMonth +  "-" + newday; 
+                document.getElementById("sheet_range").value = data.upcoming_change.sheet_range; 
+                document.getElementById("sheetIdToUpdate").value = sheetId; 
+                document.getElementById("results").style.display='block'; 
+                document.getElementById("inputFields").style.display='block'; 
+                console.log(data)
             })
             .catch(error => {
                 console.error('Error:', error);
             });
         });
+
+        function submitTimesheetData() {
+            const task = document.getElementById("task").value;
+            const sheetId = document.getElementById("sheetIdToUpdate").value;
+            const sheetName = document.getElementById("sheetName").value;
+            const date = document.getElementById("date").value;
+            const hoursWorked = document.getElementById("hoursWorked").value;
+            const leaveOptions = document.getElementById("leaveOptions").value;
+            const sheetRange = document.getElementById("sheet_range").value;
+            fetch('/sheet/new-entry', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(
+                    { 
+                        sheet_id: sheetId,
+                        sheet_name: sheetName,
+                        date_to_update:date,
+                        task_done:task,
+                        total_hours:hoursWorked,
+                        on_leave:leaveOptions,
+                        sheet_range:sheetRange
+                    }
+                ),
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert("data updated successfully")
+                console.log(data)
+                var newdate = new Date(data.upcoming_change.date_to_update)
+                var newMonth = (newdate.getMonth() + 1).toString().padStart(2,'0')
+                var newday = newdate.getDate().toString().padStart(2,'0')
+                document.getElementById("lastUpdated").textContent = data.last_update.last_updated_date; 
+                document.getElementById("lastDescription").textContent = data.last_update.last_task_info; 
+                document.getElementById("hours").textContent = data.last_update.last_working_hours; 
+                document.getElementById("leaveDetails").textContent = data.last_update.leave_on_last_date; 
+                document.getElementById("date").value = newdate.getFullYear() + "-" + newMonth +  "-" + newday; 
+                document.getElementById("sheet_range").value = data.upcoming_change.sheet_range; 
+                document.getElementById("sheetIdToUpdate").value = sheetId; 
+                document.getElementById("results").style.display='block'; 
+                document.getElementById("inputFields").style.display='block';
+                document.getElementById("task").value = ""
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+            
+        }
     </script>
 </body>
 </html>

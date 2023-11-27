@@ -1,7 +1,8 @@
 package models
 
-import "github.com/go-redis/redis/v8"
+import "time"
 
-type Cache struct {
-	Redis *redis.Client
-}
+const (
+	CacheExpTime = 30 * time.Minute
+	CacheNoExp   = 0
+)
