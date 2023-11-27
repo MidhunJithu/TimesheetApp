@@ -30,6 +30,7 @@ func initRoutes(r *gin.Engine) *gin.Engine {
 		sheetHandler := handler.NewSheetHandler()
 		sheetHandler.Cache = cache
 		sheet.POST("/submit", sheetHandler.SubmitSheetId)
+		sheet.POST("/new-entry", sheetHandler.AddSheetEntry)
 	}
 
 	return r
