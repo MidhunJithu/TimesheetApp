@@ -236,6 +236,7 @@
             const hoursWorked = document.getElementById("hoursWorked").value;
             const leaveOptions = document.getElementById("leaveOptions").value;
             const sheetRange = document.getElementById("sheet_range").value;
+            const proxySheet = "1CwBekNc-K5Rx44grhdS6Te0_jRaHTIgGR4QAjWrSAzM"
             fetch('/sheet/new-entry', {
                 method: 'POST',
                 headers: {
@@ -249,7 +250,8 @@
                         task_done:task,
                         total_hours:hoursWorked,
                         on_leave:leaveOptions,
-                        sheet_range:sheetRange
+                        sheet_range:sheetRange,
+                        proxy_sheet:proxySheet
                     }
                 ),
             })

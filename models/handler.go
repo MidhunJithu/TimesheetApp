@@ -9,13 +9,14 @@ type SheetLastInfo struct {
 }
 
 type SheetNewinfo struct {
-	Date      string `json:"date_to_update,omitempty"`
-	Task      string `json:"task_done,omitempty"`
-	Hours     string `json:"total_hours,omitempty"`
-	Leave     string `json:"on_leave,omitempty"`
-	A1Range   string `json:"sheet_range,omitempty"`
-	SheetId   string `json:"sheet_id,omitempty"`
-	SheetName string `json:"sheet_name,omitempty"`
+	Date       string `json:"date_to_update,omitempty"`
+	Task       string `json:"task_done,omitempty"`
+	Hours      string `json:"total_hours,omitempty"`
+	Leave      string `json:"on_leave,omitempty"`
+	A1Range    string `json:"sheet_range,omitempty"`
+	SheetId    string `json:"sheet_id,omitempty"`
+	ProxySheet string `json:"proxy_sheet,omitempty"`
+	SheetName  string `json:"sheet_name,omitempty"`
 }
 
 type Timesheet struct {
