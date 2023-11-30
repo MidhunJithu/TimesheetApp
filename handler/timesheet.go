@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	firestore "example/timesheet/fireStore"
 	"example/timesheet/models"
 	"example/timesheet/redis"
 	"example/timesheet/utils"
@@ -15,14 +17,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	mail "github.com/go-gomail/gomail"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
 )
 
 type SheetSrv struct {
 	Cache *redis.Cache
+	Db    *firestore.FireStore
 }
 
 func NewSheetHandler() *SheetSrv {
@@ -172,6 +177,25 @@ func (s *SheetSrv) AddSheetEntry(ctx *gin.Context) {
 	s.Cache.SetDataInCache(context.Background(), sheetEntry.SheetId+"_latest", cacheString, models.CacheNoExp)
 	timeSheet := models.Timesheet{Lastupdate: &LatestEntry}
 	timeSheet.NewEntry = GetNextUpdateinfo(LatestEntry, sheetEntry.SheetName)
+	if date.Weekday() == time.Tuesday {
+		sheetRange := strings.Split(sheetEntry.A1Range, ":")
+		currRow, err := strconv.Atoi(sheetRange[1])
+		if err != nil {
+			log.Errorf("some error on sheet range - %s", err)
+		}
+		prevRow := currRow - 6
+		range_ := strings.Replace(sheetEntry.A1Range, fmt.Sprintf("%v:", currRow), fmt.Sprintf("%v:", prevRow), 1)
+		data := getSheetData(srv, sheetEntry.SheetId, range_)
+		// updateSheetdata(srv, sheetEntry.ProxySheet, "8:14", data)
+		// data = getSheetData(srv, sheetEntry.ProxySheet, "A1:P50")
+		template, err := os.ReadFile("templates/email_template.html")
+		if err != nil {
+			panic(err)
+		}
+		table := convertToHTMLTable(data)
+		templateBody := strings.ReplaceAll(string(template), "<tableBody></tableBody>", table)
+		Sendmail("midhun.m@techversantinfo.com", []string{"midhunmnair006@gmail.com"}, nil, "weekly timesheet", templateBody)
+	}
 	ctx.JSON(200, timeSheet)
 }
 
@@ -203,4 +227,99 @@ func GetNextUpdateinfo(currentSheet models.SheetLastInfo, sheetName string) *mod
 		NewEntry.A1Range = fmt.Sprintf("%s!%v:%v", sheetName, rowVal+1, rowVal+1)
 	}
 	return NewEntry
+}
+
+func (s *SheetSrv) SendStatusMail(template, content, from, to, sub, cc string) (err error) {
+	s.Db = firestore.InitDb()
+	defer s.Db.Client.Close()
+	iter := s.Db.Client.Collection("email_templates").Documents(context.Background())
+	mailTemplate := ""
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Failed to iterate: %v", err)
+			return err
+		}
+		data := doc.Data()
+		if val, ok := data["name"]; ok && val == template {
+			mailTemplate = val.(string)
+		}
+	}
+	fmt.Println("mailtemplate", mailTemplate)
+	Sendmail("afin.ta@techversantinfo.com", []string{"midhunmnair006@gmail.com"}, nil, "testing", "hello")
+	return
+}
+
+func (s *SheetSrv) GetTimesheetMailDay(sheetId string) (day string) {
+	s.Db = firestore.InitDb()
+	defer s.Db.Client.Close()
+	iter := s.Db.Client.Collection("timeSheetInfo").Documents(context.Background())
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Failed to iterate: %v", err)
+			return
+		}
+		data := doc.Data()
+		if val, ok := data["sheetId"]; ok && val == sheetId {
+			return fmt.Sprintf("%s", data["mailWeekDay"])
+		}
+	}
+	return
+}
+
+func Sendmail(from string, to []string, cc map[string]string, sub, body string) {
+	msg := mail.NewMessage()
+	msg.SetHeader("From", from)
+	msg.SetHeader("To", to...)
+	for addr, name := range cc {
+		msg.SetAddressHeader("Cc", addr, name)
+	}
+	msg.SetHeader("Subject", sub)
+	msg.SetBody("text/html", body)
+
+	d := mail.NewDialer("smtp.gmail.com", 587, "midhun.m@techversantinfo.com", "midhun@login2021")
+
+	// Send the email to Bob, Cora and Dan.
+	if err := d.DialAndSend(msg); err != nil {
+		panic(err)
+	}
+}
+
+func getSheetData(srv *sheets.Service, sheetid, range_ string) [][]interface{} {
+	val, err := srv.Spreadsheets.Values.Get(sheetid, range_).Do()
+	if err != nil {
+		panic(err)
+	}
+	return val.Values
+}
+func updateSheetdata(srv *sheets.Service, sheetid string, range_ string, val [][]interface{}) {
+	_, err := srv.Spreadsheets.Values.Update(sheetid, range_, &sheets.ValueRange{
+		Values: val,
+	}).ValueInputOption("RAW").Do()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func convertToHTMLTable(data [][]interface{}) string {
+	var buffer bytes.Buffer
+
+	// buffer.WriteString("<table border='1' cellpadding='10'>")
+	for _, row := range data {
+		buffer.WriteString("<tr>")
+		for _, cell := range row {
+			buffer.WriteString(fmt.Sprintf("<td>%v</td>", cell))
+		}
+		buffer.WriteString("</tr>")
+	}
+	// buffer.WriteString("</table>")
+
+	return buffer.String()
 }
