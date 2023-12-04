@@ -129,6 +129,8 @@
     <div class="flexBox">
         <div id="results">
             <h2>Timesheet Details</h2>
+            <input type="button" value="Refresh" onclick="RefreshData()">
+
             <label class="result-label" for="lastUpdated">Last Updated:</label>
             <div class="result-value" id="lastUpdated">Sample Date</div>
 
@@ -278,6 +280,48 @@
             });
             
         }
-    </script>
+        
+        function RefreshData(){
+            const sheetId = document.getElementById("sheetId").value;
+            const sheetName = document.getElementById("sheetName").value;
+            console.log("Sheet ID or Name:", sheetId);
+             // You can also use JavaScript to send the sheetId to your Go backend using fetch or another method
+            // Example using fetch:
+            fetch('/sheet/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(
+                    { 
+                        sheetId: sheetId,
+                        sheetName: sheetName,
+                        Reload :true
+                    }
+                ),
+            })
+            .then(response => response.json())
+            .then(data => {
+                var newdate = new Date(data.upcoming_change.date_to_update)
+                var newMonth = (newdate.getMonth() + 1).toString().padStart(2,'0')
+                var newday = newdate.getDate().toString().padStart(2,'0')
+                console.log(newday+"-"+newMonth+"-"+newdate.getFullYear())
+                // Handle the response from your Go backend if needed
+                document.getElementById("lastUpdated").textContent = data.last_update.last_updated_date; 
+                document.getElementById("lastDescription").textContent = data.last_update.last_task_info; 
+                document.getElementById("hours").textContent = data.last_update.last_working_hours; 
+                document.getElementById("leaveDetails").textContent = data.last_update.leave_on_last_date; 
+                document.getElementById("date").value = newdate.getFullYear() + "-" + newMonth +  "-" + newday; 
+                document.getElementById("sheet_range").value = data.upcoming_change.sheet_range; 
+                document.getElementById("sheetIdToUpdate").value = sheetId; 
+                document.getElementById("results").style.display='block'; 
+                document.getElementById("inputFields").style.display='block'; 
+                console.log(data)
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+   </script>
 </body>
 </html>
