@@ -164,7 +164,7 @@ func (s *SheetSrv) AddSheetEntry(ctx *gin.Context) {
 		Values: [][]interface{}{
 			{dateEntry, date.Weekday().String(), sheetEntry.Task, sheetEntry.Hours, sheetEntry.Leave, sheetEntry.Leave},
 		},
-	}).ValueInputOption("RAW").Do()
+	}).ValueInputOption("USER_ENTERED").Do()
 	if err != nil {
 		utils.AbortWithError(ctx, err)
 		return
@@ -447,6 +447,9 @@ func getTotalHours(data [][]interface{}, hourcol int) int {
 	for _, row := range data {
 		for i, col := range row {
 			if i == hourcol {
+				if col == "" {
+					col = "0"
+				}
 				nwhr, err := strconv.Atoi(col.(string))
 				if err != nil {
 					panic(err)
