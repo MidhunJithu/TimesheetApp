@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	firestore "example/timesheet/fireStore"
 	"example/timesheet/models"
 	"example/timesheet/redis"
@@ -36,9 +37,11 @@ func NewSheetHandler() *SheetSrv {
 
 func (s *SheetSrv) SubmitSheetId(ctx *gin.Context) {
 	srv, err := s.GetSheetClient(ctx)
+
 	if err != nil {
-		return
+		ctx.JSON(401, gin.H{"error": "UnAuthorised"})
 	}
+
 	body, err := io.ReadAll(ctx.Request.Body)
 	defer ctx.Request.Body.Close()
 	if err != nil {
@@ -49,10 +52,24 @@ func (s *SheetSrv) SubmitSheetId(ctx *gin.Context) {
 	if err != nil {
 		log.Fatalf("Unable to marshall request body: %v", err)
 	}
+
 	sheetId, ok := jsonMap["sheetId"]
 	if !ok {
 		log.Fatalf("No sheet id present: %v", err)
 	}
+
+	sheetID := sheetId.(string)
+
+	resp, err := srv.Spreadsheets.Get(string(sheetID)).Do()
+	if err != nil {
+		fmt.Println("error found", err)
+	}
+
+	var tabNames []string
+	for _, sheet := range resp.Sheets {
+		tabNames = append(tabNames, sheet.Properties.Title)
+	}
+
 	sheetName, ok := jsonMap["sheetName"]
 	if !ok {
 		log.Fatalf("No sheet id present: %v", err)
@@ -120,6 +137,7 @@ func (s *SheetSrv) SubmitSheetId(ctx *gin.Context) {
 }
 
 func (s *SheetSrv) GetSheetClient(ctx *gin.Context) (*sheets.Service, error) {
+
 	srv := &sheets.Service{}
 	file, err := os.ReadFile("credentials.json")
 	if err != nil {
@@ -131,12 +149,24 @@ func (s *SheetSrv) GetSheetClient(ctx *gin.Context) (*sheets.Service, error) {
 		utils.AbortWithError(ctx, err)
 		return nil, err
 	}
-	client := utils.GetClient(cred)
+	// drive := &drive.Service{}
+
+	// client := utils.GetClient(cred)
+
+	tokFile := "token.json"
+	tok, err := utils.TokenFromFile(tokFile)
+	if err != nil {
+		return nil, errors.New("token_empty")
+
+	}
+
+	client := cred.Client(context.Background(), tok)
 
 	srv, err = sheets.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		log.Fatalf("Unable to retrieve Sheets client: %v", err)
 	}
+
 	return srv, nil
 }
 
@@ -235,6 +265,7 @@ func (s *SheetSrv) AddSheetEntry(ctx *gin.Context) {
 }
 
 func getLastweekdata(srv *sheets.Service, sheetId string) [][]interface{} {
+
 	spreadsheet, err := srv.Spreadsheets.Get(sheetId).Do()
 	if err != nil {
 		log.Fatalf("Unable to retrieve spreadsheet: %v", err)
@@ -386,6 +417,7 @@ func Sendmail(from string, to []string, cc map[string]string, sub, body string) 
 }
 
 func getSheetData(srv *sheets.Service, sheetid, range_ string) [][]interface{} {
+
 	val, err := srv.Spreadsheets.Values.Get(sheetid, range_).Do()
 	if err != nil {
 		panic(err)
